@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Post Previewer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f3f2ef;
+            color: #191919;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #0a66c2;
+        }
+        .post-type-selector {
+            margin-bottom: 20px;
+        }
+        .content-type {
+            display: flex;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+        .content-type label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .content-type input {
+            margin-right: 8px;
+        }
+        .input-area {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border: 1px solid #dce6f1;
+            border-radius: 4px;
+            resize: none;
+            font-size: 16px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .character-count {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 14px;
+            color: #5e5e5e;
+        }
+        .character-count.limit {
+            color: #b74700;
+        }
+        .preview-area {
+            margin-top: 20px;
+            border: 1px solid #dce6f1;
+            border-radius: 8px;
+            padding: 16px;
+            background-color: white;
+        }
+        .device-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .device-btn {
+            padding: 8px 16px;
+            border: 1px solid #dce6f1;
+            background-color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .device-btn.active {
+            background-color: #0a66c2;
+            color: white;
+            border-color: #0a66c2;
+        }
+        .preview-content {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+        }
+        .preview-area.mobile {
+            max-width: 320px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .preview-area.desktop {
+            max-width: 100%;
+        }
+        .preview-area.mobile .preview-content {
+            font-size: 15px;
+        }
+        .truncated {
+            overflow: hidden;
+            position: relative;
+        }
+        .desktop .truncated {
+            max-height: 400px;
+        }
+        .mobile .truncated {
+            max-height: 340px;
+        }
+        .show-more {
+            color: #0a66c2;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        .with-hard-cutoff {
+            border-bottom: 2px solid #dce6f1;
+            padding-bottom: 4px;
+        }
+        .hidden-content-indicator {
+            display: block;
+            margin-top: 12px;
+            padding: 8px;
+            background-color: #f3f2ef;
+            border: 1px solid #dce6f1;
+            border-radius: 8px;
+            color: #5e5e5e;
+            font-size: 14px;
+            text-align: center;
+            font-style: italic;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .fits {
+            background-color: #f1f7f1;
+            color: #057642;
+        }
+        .exceeds {
+            background-color: #fcf1ed;
+            color: #b74700;
+        }
+        .info {
+            font-size: 14px;
+            color: #5e5e5e;
+            margin-top: 20px;
+            line-height: 1.4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        table th, table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #dce6f1;
+        }
+        table th {
+            color: #0a66c2;
+        }
+        .limit-explainer {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f3f2ef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LinkedIn Post Previewer</h1>
+        
+        <div class="post-type-selector">
+            <h3>Content Type</h3>
+            <div class="content-type">
+                <label>
+                    <input type="radio" name="content-type" value="post" checked>
+                    Post
+                </label>
+                <label>
+                    <input type="radio" name="content-type" value="article">
+                    Article
+                </label>
+                <label>
+                    <input type="radio" name="content-type" value="profile">
+                    Profile About
+                </label>
+                <label>
+                    <input type="radio" name="content-type" value="comment">
+                    Comment
+                </label>
+            </div>
+        </div>
+        
+        <div class="device-toggle">
+            <button id="mobile-btn" class="device-btn">Mobile</button>
+            <button id="desktop-btn" class="device-btn active">Desktop</button>
+        </div>
+        
+        <div class="input-area">
+            <textarea id="post-input" placeholder="Type your LinkedIn content here..."></textarea>
+            <div id="char-count" class="character-count">0/3,000</div>
+        </div>
+        
+        <div class="preview-area desktop">
+            <div id="preview-content" class="preview-content"></div>
+            <div id="show-more" class="show-more" style="display: none;">...see more</div>
+            <div class="toggle-container" style="margin-top: 15px; text-align: center;">
+                <label for="exact-preview" style="font-size: 14px; color: #5e5e5e; display: flex; align-items: center; justify-content: center;">
+                    <input type="checkbox" id="exact-preview" style="margin-right: 8px;">
+                    Show exact cutoff point (what viewers will see)
+                </label>
+            </div>
+        </div>
+        
+        <div id="status" class="status" style="display: none;"></div>
+
+        <div class="limit-explainer">
+            <h3>LinkedIn Character Limits:</h3>
+            <table>
+                <tr>
+                    <th>Content Type</th>
+                    <th>Character Limit</th>
+                    <th>Truncated After</th>
+                </tr>
+                <tr>
+                    <td>Posts</td>
+                    <td>3,000 characters</td>
+                    <td>~210 characters (desktop)<br>~140 characters (mobile)</td>
+                </tr>
+                <tr>
+                    <td>Articles</td>
+                    <td>125,000 characters</td>
+                    <td>N/A (no truncation)</td>
+                </tr>
+                <tr>
+                    <td>Profile "About"</td>
+                    <td>2,600 characters</td>
+                    <td>~200 characters</td>
+                </tr>
+                <tr>
+                    <td>Comments</td>
+                    <td>1,750 characters</td>
+                    <td>Fully displayed</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const postInput = document.getElementById('post-input');
+        const charCount = document.getElementById('char-count');
+        const previewContent = document.getElementById('preview-content');
+        const showMoreBtn = document.getElementById('show-more');
+        const statusDiv = document.getElementById('status');
+        const mobileBtn = document.getElementById('mobile-btn');
+        const desktopBtn = document.getElementById('desktop-btn');
+        const previewArea = document.querySelector('.preview-area');
+        const exactPreviewCheckbox = document.getElementById('exact-preview');
+        const contentTypeRadios = document.querySelectorAll('input[name="content-type"]');
+        
+        // LinkedIn content type limits
+        const contentTypeLimits = {
+            post: {
+                maxChars: 3000,
+                desktop: {
+                    maxHeight: 400,
+                    truncateAfter: 210
+                },
+                mobile: {
+                    maxHeight: 340,
+                    truncateAfter: 140
+                },
+                showMoreText: "...see more"
+            },
+            article: {
+                maxChars: 125000,
+                desktop: {
+                    maxHeight: 9999, // No truncation for articles
+                    truncateAfter: 9999
+                },
+                mobile: {
+                    maxHeight: 9999, // No truncation for articles
+                    truncateAfter: 9999
+                },
+                showMoreText: ""
+            },
+            profile: {
+                maxChars: 2600,
+                desktop: {
+                    maxHeight: 400,
+                    truncateAfter: 200
+                },
+                mobile: {
+                    maxHeight: 340,
+                    truncateAfter: 180
+                },
+                showMoreText: "...see more"
+            },
+            comment: {
+                maxChars: 1750,
+                desktop: {
+                    maxHeight: 9999, // No truncation for comments
+                    truncateAfter: 9999
+                },
+                mobile: {
+                    maxHeight: 9999, // No truncation for comments
+                    truncateAfter: 9999
+                },
+                showMoreText: ""
+            }
+        };
+        
+        let currentDevice = 'desktop';
+        let currentContentType = 'post';
+        
+        // Toggle between mobile and desktop views
+        mobileBtn.addEventListener('click', () => {
+            setDeviceView('mobile');
+        });
+        
+        desktopBtn.addEventListener('click', () => {
+            setDeviceView('desktop');
+        });
+        
+        // Handle content type changes
+        contentTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentContentType = e.target.value;
+                updateCharCount();
+                updatePreview();
+            });
+        });
+        
+        function setDeviceView(device) {
+            currentDevice = device;
+            
+            // Update UI
+            if (device === 'mobile') {
+                previewArea.classList.remove('desktop');
+                previewArea.classList.add('mobile');
+                mobileBtn.classList.add('active');
+                desktopBtn.classList.remove('active');
+            } else {
+                previewArea.classList.remove('mobile');
+                previewArea.classList.add('desktop');
+                desktopBtn.classList.add('active');
+                mobileBtn.classList.remove('active');
+            }
+            
+            // Re-evaluate the preview with the new device settings
+            updatePreview();
+        }
+        
+        function updateCharCount() {
+            const text = postInput.value;
+            const count = text.length;
+            const maxChars = contentTypeLimits[currentContentType].maxChars;
+            
+            charCount.textContent = `${count.toLocaleString()}/${maxChars.toLocaleString()}`;
+            charCount.className = count > maxChars ? 'character-count limit' : 'character-count';
+        }
+        
+        postInput.addEventListener('input', () => {
+            updateCharCount();
+            updatePreview();
+        });
+        
+        exactPreviewCheckbox.addEventListener('change', () => {
+            updatePreview();
+        });
+        
+        function updatePreview() {
+            const text = postInput.value;
+            const count = text.length;
+            const exactPreview = exactPreviewCheckbox.checked;
+            const limits = contentTypeLimits[currentContentType];
+            const deviceSettings = limits[currentDevice];
+            const maxChars = limits.maxChars;
+            
+            // Format the text for preview (handle line breaks, URLs, hashtags, etc.)
+            previewContent.innerHTML = formatText(text);
+            
+            // Set "see more" button text based on content type
+            showMoreBtn.textContent = limits.showMoreText;
+            
+            // For content types that don't truncate, hide the checkbox and show more
+            if (deviceSettings.truncateAfter >= 1000) {
+                showMoreBtn.style.display = 'none';
+                exactPreviewCheckbox.parentElement.style.display = 'none';
+                previewContent.classList.remove('truncated');
+                
+                // Remove hidden content indicator if it exists
+                const hiddenIndicator = document.querySelector('.hidden-content-indicator');
+                if (hiddenIndicator) {
+                    hiddenIndicator.remove();
+                }
+                
+                if (text.trim().length > 0) {
+                    statusDiv.textContent = `This ${currentContentType} will display in full without truncation.`;
+                    statusDiv.className = 'status fits';
+                    statusDiv.style.display = 'block';
+                } else {
+                    statusDiv.style.display = 'none';
+                }
+                
+                return;
+            } else {
+                // Show the checkbox for content types that truncate
+                exactPreviewCheckbox.parentElement.style.display = 'flex';
+            }
+            
+            // Check if truncation is needed
+            const exceedsHeight = previewContent.scrollHeight > deviceSettings.maxHeight;
+            const exceedsTruncateLimit = count > deviceSettings.truncateAfter;
+            
+            if (exceedsHeight || exceedsTruncateLimit) {
+                previewContent.classList.add('truncated');
+                
+                if (exactPreview) {
+                    // Truncate text at character limit for the device/content type
+                    const truncatePoint = Math.min(deviceSettings.truncateAfter, text.length);
+                    
+                    // Handle possible cutoffs in the middle of words or HTML tags
+                    let safeText = text.substring(0, truncatePoint);
+                    // Make sure we don't cut in the middle of a word if possible
+                    const lastSpaceIndex = safeText.lastIndexOf(' ');
+                    if (lastSpaceIndex > truncatePoint * 0.8) { // Only if the space is reasonably close to the end
+                        safeText = safeText.substring(0, lastSpaceIndex);
+                    }
+                    
+                    // Apply the truncated text
+                    previewContent.innerHTML = formatText(safeText);
+                    previewContent.classList.add('with-hard-cutoff');
+                    
+                    // Add the hidden content indicator
+                    const existingIndicator = document.querySelector('.hidden-content-indicator');
+                    if (!existingIndicator) {
+                        const hiddenIndicator = document.createElement('div');
+                        hiddenIndicator.className = 'hidden-content-indicator';
+                        hiddenIndicator.innerText = 'Hidden content (only visible after clicking "...see more")';
+                        previewContent.parentNode.insertBefore(hiddenIndicator, showMoreBtn);
+                    }
+                } else {
+                    // Regular mode - just show the truncation class
+                    previewContent.classList.remove('with-hard-cutoff');
+                    
+                    // Remove hidden content indicator if it exists
+                    const hiddenIndicator = document.querySelector('.hidden-content-indicator');
+                    if (hiddenIndicator) {
+                        hiddenIndicator.remove();
+                    }
+                }
+                
+                showMoreBtn.style.display = 'inline-block';
+                statusDiv.textContent = `This ${currentContentType} will be truncated with "...see more" on ${currentDevice}.`;
+                statusDiv.className = 'status exceeds';
+                statusDiv.style.display = 'block';
+            } else {
+                previewContent.classList.remove('truncated');
+                previewContent.classList.remove('with-hard-cutoff');
+                showMoreBtn.style.display = 'none';
+                
+                // Remove hidden content indicator if it exists
+                const hiddenIndicator = document.querySelector('.hidden-content-indicator');
+                if (hiddenIndicator) {
+                    hiddenIndicator.remove();
+                }
+                
+                if (text.trim().length > 0) {
+                    statusDiv.textContent = `This ${currentContentType} will display fully without truncation on ${currentDevice}.`;
+                    statusDiv.className = 'status fits';
+                    statusDiv.style.display = 'block';
+                } else {
+                    statusDiv.style.display = 'none';
+                }
+            }
+        }
+        
+        function formatText(text) {
+            // Replace URLs with clickable links
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            text = text.replace(urlRegex, '<span style="color: #0a66c2;">$1</span>');
+            
+            // Replace hashtags
+            const hashtagRegex = /#(\w+)/g;
+            text = text.replace(hashtagRegex, '<span style="color: #0a66c2;">#$1</span>');
+            
+            // Replace mentions
+            const mentionRegex = /@(\w+)/g;
+            text = text.replace(mentionRegex, '<span style="color: #0a66c2;">@$1</span>');
+            
+            // Replace line breaks with <br>
+            return text.replace(/\n/g, '<br>');
+        }
+        
+        showMoreBtn.addEventListener('click', function() {
+            if (exactPreviewCheckbox.checked) {
+                // In exact preview mode, clicking "show more" should show the full text
+                exactPreviewCheckbox.checked = false;
+                
+                // Remove hidden content indicator if it exists
+                const hiddenIndicator = document.querySelector('.hidden-content-indicator');
+                if (hiddenIndicator) {
+                    hiddenIndicator.remove();
+                }
+                
+                updatePreview();
+                previewContent.classList.remove('truncated');
+                this.style.display = 'none';
+            } else {
+                // Toggle truncation in regular mode
+                previewContent.classList.toggle('truncated');
+                this.textContent = previewContent.classList.contains('truncated') 
+                    ? contentTypeLimits[currentContentType].showMoreText 
+                    : 'See less';
+            }
+        });
+        
+        // Initialize
+        updateCharCount();
+        updatePreview();
+    </script>
+</body>
+</html>
